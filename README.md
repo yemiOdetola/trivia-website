@@ -47,3 +47,67 @@ Pay special attention to what data the frontend is expecting from each API respo
 By making notes ahead of time, you will practice the core skill of being able to read and understand code and will have a simple plan to follow to build out the endpoints of your backend API.
 
 > View the [Frontend README](./frontend/README.md) for more details.
+
+
+## API Reference
+
+### Getting Started
+- Backend Base URL: http://127.0.0.1:5000/
+- Frontend Base URL: localhost:3000/
+
+### Handling Error
+Errors are returned in JSON format; for example:
+```json
+{
+    'success': False,
+    'message': 'A simple description of what went wrong',
+    'error': 404
+}
+```
+
+There are basically 4 categories of error to be expected from the API:
+- 400: Bad request
+- 404: Resource Not Found
+- 422: Unprocessable request
+- 500: Internal server error
+
+### Endpoints
+
+#### GET /categories
+- Fetches a dictionary of categories in which the keys are the primary keys[id] and the value is the corresponding string of the category
+- Request Arguments: None
+- Returns: A dictionary with a single key, categories, that contains a object key:value pairs. 
+- Sample: `curl http://127.0.0.1:5000/books`
+
+```json
+{
+  "categories": {
+    "1": "Science",
+    "2": "Art",
+    "3": "Geography",
+    "4": "History",
+    "5": "Entertainment",
+    "6": "Sports"
+  }
+}
+```
+
+#### POST '/questions'
+- Adds a new question. Questions have 4 compulsory keys: question, answer, difficulty and category. 
+- Example: ```curl -X POST - H "Content-Type: application/json" -d '{"question": "Who is Donald Trump?", "answer": "the current president of US", "difficulty": 1, "category": "5"}' http://127.0.0.1:5000/questions```
+```
+{
+  "success": true
+  "created": 19
+  "total_questions": 19
+}
+```
+
+### Testing
+To run the tests, run
+```
+dropdb trivia_test
+createdb trivia_test
+psql trivia_test < trivia.psql
+python test_flaskr.py
+```
