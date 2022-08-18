@@ -55,20 +55,20 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(res.data)
         self.assertEqual(res.status_code, 404)
         self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'], 'Resource Not Found')
+        self.assertEqual(data['message'], 'Resource not found')
     
     def test_delete_question(self):
-        res = self.client().delete("/questions/9")
+        res = self.client().delete("/questions/12")
         data = json.loads(res.data)
 
-        question = Question.query.get(9)
+        question = Question.query.get(12)
 
         self.assertEqual(res.status_code, 200)
         self.assertTrue(data['success'])
         self.assertEqual(question, None)
 
     def test_delete_question_fail(self):
-        res = self.client().delete('/questions/5')
+        res = self.client().delete('/questions/12')
         data = json.loads(res.data)
         self.assertEqual(res.status_code, 422)
         self.assertEqual(data['success'], False)
@@ -134,7 +134,7 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(res.data)
         self.assertEqual(res.status_code, 422)
         self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'], 'Not Processable')
+        self.assertEqual(data['message'], 'Unprocessable request')
 
 if __name__ == "__main__":
     unittest.main()

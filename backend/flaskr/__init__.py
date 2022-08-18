@@ -126,6 +126,7 @@ def create_app(test_config=None):
             current_questions = paginate_data(request, questions_all)
             return jsonify({
                 'success': True,
+                'deleted_question': question_id,
                 'questions': current_questions,
                 'total_questions': len(questions_all)
             })
@@ -165,7 +166,8 @@ def create_app(test_config=None):
                 filtered_questions = Question.query.filter(Question.question.ilike(f'%{search}%'))\
                     .order_by(Question.difficulty)\
                     .all()
-                paginated_questions = paginate_data(request, filtered_questions)
+                paginated_questions = paginate_data(
+                    request, filtered_questions)
                 return jsonify({
                     'success': True,
                     'questions': paginated_questions,
@@ -201,7 +203,8 @@ def create_app(test_config=None):
             abort(404)
 
         try:
-            questions_all = Question.query.filter_by(category=category.id).all()
+            questions_all = Question.query.filter_by(
+                category=category.id).all()
             paginated_questions = paginate_data(request, questions_all)
 
             return jsonify({
@@ -225,29 +228,38 @@ def create_app(test_config=None):
     and shown whether they were correct or not.
     """
     @app.route('/quizzes', methods=['POST'])
-    def get_quiz():
-        try:
-            request_body = request.get_json()
-            category = request_body.get('quiz_category')
-            available_questions = None
-            if category['id'] != 0:
-                available_questions = Question.query\
-                    .filter(Question.category == category['id'])\
-                    .order_by(Question.difficulty)\
-                    .all()
-            else:
-                available_questions = Question.query.order_by(Question.difficulty).all()
-            print('available_q: ', available_questions)
-            quiz_question = available_questions[random.randrange(0, len(available_questions))].format()\
-            if len(available_questions) > 0 else None
+    def quiz():
+        body = request.get_json()
+        quizCategory = body.get('quiz_category')
+        previousQuestion = body.get('previous_questions')
+        questions_query = {}
 
-            return jsonify({
-                'success': True,
-                'question': quiz_question
-            })
-        except Exception as error:
-            print('error: ', error)
-            abort(422)
+        try:
+            if (quizCategory['id'] == 0):
+                questions_query = Question.query.all()
+            else:
+                questions_query = Question.query.filter_by(
+                    category=quizCategory['id']).all()
+
+            randomIndex = random.randint(0, len(questions_query)-1)
+            next_question = questions_query[randomIndex]
+
+            while next_question.id not in previousQuestion:
+                next_question = questions_query[randomIndex]
+                return jsonify({
+                    'success': True,
+                    'question': {
+                        "id": next_question.id,
+                        "question": next_question.question,
+                        "answer": next_question.answer,
+                        "difficulty": next_question.difficulty,
+                        "category": next_question.category,
+                    },
+                })
+
+        except Exception as e:
+            print(e)
+            abort(404)
 
     """
     @TODO:
@@ -269,7 +281,7 @@ def create_app(test_config=None):
             "error": 404,
             "message": "Resource not found"
         }), 404
-    
+
     @app.errorhandler(422)
     def unprocessable(error):
         return jsonify({
