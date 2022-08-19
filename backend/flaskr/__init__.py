@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 from flask import Flask, request, abort, jsonify
@@ -132,7 +133,7 @@ def create_app(test_config=None):
             })
 
         except Exception:
-            abort(422)
+            abort(404)
 
     """
     @TODO:
@@ -163,11 +164,10 @@ def create_app(test_config=None):
             req_body = request.get_json()
             search = req_body.get('searchTerm', None)
             if search:
-                filtered_questions = Question.query.filter(Question.question.ilike(f'%{search}%'))\
-                    .order_by(Question.difficulty)\
-                    .all()
-                paginated_questions = paginate_data(
-                    request, filtered_questions)
+                filtered_questions = Question.query.filter(Question.question.ilike(f'%{search}%')).all()
+                if (len(filtered_questions) == 0):
+                    abort(404)
+                paginated_questions = paginate_data(request, filtered_questions)
                 return jsonify({
                     'success': True,
                     'questions': paginated_questions,
@@ -186,7 +186,7 @@ def create_app(test_config=None):
                 })
         except Exception as e:
             print(str(e))
-            abort(422)
+            abort(404)
 
     """
     @TODO:
@@ -203,8 +203,7 @@ def create_app(test_config=None):
             abort(404)
 
         try:
-            questions_all = Question.query.filter_by(
-                category=category.id).all()
+            questions_all = Question.query.filter_by(category=category.id).all()
             paginated_questions = paginate_data(request, questions_all)
 
             return jsonify({
@@ -228,38 +227,43 @@ def create_app(test_config=None):
     and shown whether they were correct or not.
     """
     @app.route('/quizzes', methods=['POST'])
-    def quiz():
+    def get_random_quiz_question():
         body = request.get_json()
-        quizCategory = body.get('quiz_category')
-        previousQuestion = body.get('previous_questions')
-        questions_query = {}
-
-        try:
-            if (quizCategory['id'] == 0):
-                questions_query = Question.query.all()
-            else:
-                questions_query = Question.query.filter_by(
-                    category=quizCategory['id']).all()
-
-            randomIndex = random.randint(0, len(questions_query)-1)
-            next_question = questions_query[randomIndex]
-
-            while next_question.id not in previousQuestion:
-                next_question = questions_query[randomIndex]
-                return jsonify({
-                    'success': True,
-                    'question': {
-                        "id": next_question.id,
-                        "question": next_question.question,
-                        "answer": next_question.answer,
-                        "difficulty": next_question.difficulty,
-                        "category": next_question.category,
-                    },
-                })
-
-        except Exception as e:
-            print(e)
+        previous = body.get('previous_questions')
+        category = body.get('quiz_category')
+        if ((category is None) or (previous is None)):
             abort(404)
+
+        if (category['id'] == 0):
+            questions = Question.query.all()
+        else:
+            questions = Question.query.filter_by(category=category['id']).all()
+
+        total = len(questions)
+
+        def random_question():
+            return questions[random.randrange(0, len(questions), 1)]
+
+        def is_question_used(question):
+            is_used = False
+            for quest in previous:
+                if (quest == question.id):
+                    is_used = True
+
+            return is_used
+
+        question = random_question()
+
+        while (is_question_used(question)):
+            question = random_question()
+            if (len(previous) == total):
+                return jsonify({
+                    'success': True
+                })
+        return jsonify({
+            'success': True,
+            'question': question.format()
+        })
 
     """
     @TODO:
@@ -281,6 +285,14 @@ def create_app(test_config=None):
             "error": 404,
             "message": "Resource not found"
         }), 404
+    
+    @app.errorhandler(405)
+    def not_allowed(error):
+        return jsonify({
+            "success": False,
+            'error': 405,
+            "message": "Method not allowed"
+        }), 405
 
     @app.errorhandler(422)
     def unprocessable(error):

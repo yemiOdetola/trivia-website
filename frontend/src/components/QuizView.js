@@ -72,7 +72,14 @@ class QuizView extends Component {
         return;
       },
       error: (error) => {
-        alert('Unable to load question. Please try your request again');
+        console.log('error: ', error);
+        if (error && error.status === 404) {
+          window.location.reload();
+          console.log('No more question in category selected');
+          alert('Please select a different category');
+        } else {
+          alert('Unable to load question. Please try your request again');
+        }
         return;
       },
     });

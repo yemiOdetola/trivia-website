@@ -41,6 +41,12 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['success'], True)
         self.assertTrue(data['categories'])
 
+    def test_get_categories_not_allowed(self):
+        res = self.client().delete('/categories')
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code, 405)
+        self.assertEqual(data["success"], False)
+
     def test_get_paginated_questions(self):
         res = self.client().get('/questions')
         data = json.loads(res.data)
@@ -58,19 +64,19 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(data['message'], 'Resource not found')
     
     def test_delete_question(self):
-        res = self.client().delete("/questions/12")
+        res = self.client().delete("/questions/16")
         data = json.loads(res.data)
 
-        question = Question.query.get(12)
+        question = Question.query.get(16)
 
         self.assertEqual(res.status_code, 200)
         self.assertTrue(data['success'])
         self.assertEqual(question, None)
 
     def test_delete_question_fail(self):
-        res = self.client().delete('/questions/12')
+        res = self.client().delete('/questions/16')
         data = json.loads(res.data)
-        self.assertEqual(res.status_code, 422)
+        self.assertEqual(res.status_code, 404)
         self.assertEqual(data['success'], False)
         
     def test_create_question(self):
@@ -85,6 +91,13 @@ class TriviaTestCase(unittest.TestCase):
 
         self.assertEqual(res.status_code, 200)
         self.assertEqual(data['success'], True)
+    
+    def test_search_question(self):
+        search = {'searchTerm': 'largest lake', }
+        res = self.client().post('/search', json=search)
+        data = json.loads(res.data)
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(data['success'], False)
         
     def test_get_questions_in_category(self):
         res = self.client().get('/categories/2/questions')
@@ -99,24 +112,13 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(res.data)
         self.assertEqual(res.status_code, 404)
         self.assertEqual(data['success'], False)
-
-    def test_question_search_with_results(self):
-        res = self.client().post('/questions', json={"searchTerm": "Largest Lake"})
-        data = json.loads(res.data)
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(data['success'], True)
-        self.assertTrue(data['questions'])
-        self.assertTrue(data['total_questions'])
     
-    
-    def test_question_search_with_error(self):
-        res = self.client().post('/questions', json={"searchTerm": "Largest Ocean"})
-        data = json.loads(res.data)
-        self.assertEqual(res.status_code, 200)
-        self.assertEqual(data['success'], True)
-        self.assertEqual(data['current_category'], None)
-        self.assertEqual(data['questions'], [])
-        self.assertEqual(data['total_questions'], 0)
+    def test_404_if_search_questions_fails(self):
+        response = self.client().post('/questions', json={'searchTerm': 'vwxyz abcdef 12345'})
+        data = json.loads(response.data)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(data['success'], False)
+        self.assertEqual(data['message'], 'Resource not found')
         
     def test_next_question(self):
         res = self.client().post('/quizzes',
@@ -129,12 +131,12 @@ class TriviaTestCase(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertNotEqual(data['question'], None)
 
-    def test_422_get_quiz(self):
+    def test_404_get_quiz(self):
         res = self.client().post('/quizzes', json={'previous_questions': []})
         data = json.loads(res.data)
-        self.assertEqual(res.status_code, 422)
+        self.assertEqual(res.status_code, 404)
         self.assertEqual(data['success'], False)
-        self.assertEqual(data['message'], 'Unprocessable request')
+        self.assertEqual(data['message'], 'Resource not found')
 
 if __name__ == "__main__":
     unittest.main()
